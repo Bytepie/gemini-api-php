@@ -8,6 +8,7 @@ use GeminiAPI\ClientInterface;
 use GeminiAPI\Enums\MimeType;
 use GeminiAPI\Enums\ModelName;
 use GeminiAPI\Enums\Role;
+use GeminiAPI\SafetySetting;
 use GeminiAPI\Laravel\Contracts\GeminiContract;
 use GeminiAPI\Laravel\Exceptions\InvalidArgumentException;
 use GeminiAPI\Laravel\Exceptions\InvalidMimeType;
@@ -16,6 +17,7 @@ use GeminiAPI\Resources\Model;
 use GeminiAPI\Resources\Parts\ImagePart;
 use GeminiAPI\Resources\Parts\TextPart;
 use Psr\Http\Client\ClientExceptionInterface;
+
 
 use function array_map;
 use function base64_encode;
@@ -29,10 +31,14 @@ use function sprintf;
 
 class Gemini implements GeminiContract
 {
+    // public $safetySetting = new SafetySetting(
+    //     HarmCategory::HARM_CATEGORY_HATE_SPEECH,
+    //     HarmBlockThreshold::BLOCK_NONE,
+    // );
+
     public function __construct(
         private readonly ClientInterface $client,
-    ) {
-    }
+    ) {}
 
     /**
      * @return float[]
@@ -53,13 +59,32 @@ class Gemini implements GeminiContract
     /**
      * @throws ClientExceptionInterface
      */
-    public function generateText(string $prompt): string
+    public function generateText(string $prompt, $model, SafetySetting $safetySetting): string
     {
+        /*
+        case Default = 'models/text-bison-001';
+        case GeminiPro = 'models/gemini-pro';
+        case GeminiPro10 = 'models/gemini-1.0-pro';
+        case GeminiPro10Latest = 'models/gemini-1.0-pro-latest';
+        case GeminiPro15 = 'models/gemini-1.5-pro';
+        case GeminiPro15Flash = 'models/gemini-1.5-flash';
+        case GeminiProVision = 'models/gemini-pro-vision';
+        case Embedding = 'models/embedding-001';
+        case AQA = 'models/aqa';
+        */
+
         $response = $this->client
-            ->generativeModel(ModelName::GeminiPro)
+            ->generativeModel($model)
+            ->withAddedSafetySetting($safetySetting)
             ->generateContent(
                 new TextPart($prompt),
             );
+
+        // $response = $this->client
+        //     ->generativeModel(ModelName::GeminiPro)
+        //     ->generateContent(
+        //         new TextPart($prompt),
+        //     );
 
         return $response->text();
     }
@@ -199,10 +224,5 @@ class Gemini implements GeminiContract
         $response = $this->client->listModels();
 
         return $response->models;
-    }
-
-    public function client(): ClientInterface
-    {
-        return $this->client;
     }
 }
